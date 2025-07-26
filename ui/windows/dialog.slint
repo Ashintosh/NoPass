@@ -2,8 +2,13 @@ export component DialogWindow inherits Window {
     width: 200px;
     height: 100px;
 
+    in property <string> win_title;
+    in property <string> message;
+
+    title: win_title;
+
     Text {
-        text: "I am a dialog";
+        text: message;
         horizontal-alignment: center;
         vertical-alignment: center;
     }

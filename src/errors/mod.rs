@@ -1,2 +1,2 @@
 mod app_errors;
-mod ui_errors;
+pub(super) mod ui_errors;

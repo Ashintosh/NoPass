@@ -9,6 +9,10 @@ export component MainWindow inherits Window {
     in property <bool> dialog_visible: false;
     callback toggle_dialog();
 
+    in property <string> win_title;
+
+    title: win_title;
+
     VerticalLayout {
         alignment: space-between;
         padding: 16px;

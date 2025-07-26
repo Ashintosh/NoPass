@@ -13,7 +13,9 @@ fn main() {
     #[cfg(debug_assertions)]
     print_debug_message();
 
+    // Start the main window
     let mut main_window_handler = MainWindowHandler::new();
+    main_window_handler.get_window().unwrap().set_win_title("NoPass".into());
     main_window_handler.run();
 }
 

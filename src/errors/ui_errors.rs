@@ -2,7 +2,7 @@ use std::fmt;
 use slint::PlatformError;
 
 #[derive(Debug)]
-enum UiError {
+pub(crate) enum UiError {
     WindowCreation(String),
     WindowOperation(String),
     Platform(PlatformError),

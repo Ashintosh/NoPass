@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crate::handlers::WindowHandler;
+use crate::{errors::ui_errors::UiError, handlers::WindowHandler};
 use crate::DialogWindow;
 
 use slint::{ComponentHandle, Weak};
@@ -12,8 +12,8 @@ pub(crate) struct DialogWindowHandler {
 }
 
 impl DialogWindowHandler {
-    pub(crate) fn new() -> Self {
-        let window = DialogWindow::new().expect("Failed to create new DialogWindow");
+    pub(crate) fn new() -> Result<Self, UiError> {
+        let window = DialogWindow::new().map_err(|_| UiError::WindowCreation("Failed to create dialog window".into()))?;
         let weak = window.as_weak();
         let handler = Self {
             _window_strong: window,
@@ -22,9 +22,10 @@ impl DialogWindowHandler {
         };
 
         //Self::setup(&handler);
-        handler
+        Ok(handler)
     }
 
+    // TODO: Setup for dialog box
     fn setup(&self) {
         todo!()
     }
@@ -41,6 +42,7 @@ impl WindowHandler for DialogWindowHandler {
         if let Ok(visible) = self.visible.lock() {
             return *visible;
         }
+
         false
     }
 
