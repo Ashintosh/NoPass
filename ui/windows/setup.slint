@@ -1,0 +1,36 @@
+import { Button } from "std-widgets.slint";
+
+export component SetupView {
+    VerticalLayout {
+        spacing: 30px;
+        padding: 20px;
+        alignment: center;
+
+        Image {
+            preferred-height: 50px;
+            preferred-width: 50px;
+            source: @image-url("../assets/images/logo.png");
+        }
+        
+        Text {
+            font-size: 16px;
+            text: "NoPass Password Manager";
+            horizontal-alignment: center;
+        }
+
+        HorizontalLayout {
+            spacing: 5px;
+            alignment: center;
+
+            Button {
+                height: 30px;
+                text: "Create Vault";
+            }
+
+            Button {
+                height: 30px;
+                text: "Open Vault";
+            }
+        }
+    }
+}

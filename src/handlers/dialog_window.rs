@@ -1,9 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use crate::{errors::ui_errors::UiError, handlers::WindowHandler};
-use crate::DialogWindow;
-
 use slint::{ComponentHandle, Weak};
+
+use crate::DialogWindow;
+use crate::errors::ui_errors::UiError;
+use crate::handlers::WindowHandler;
+
 
 pub(crate) struct DialogWindowHandler {
     _window_strong: DialogWindow,

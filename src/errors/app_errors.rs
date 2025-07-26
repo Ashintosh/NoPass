@@ -1,5 +1,15 @@
+/////////////////////////////////////////////////////////////////
+///  NOTE:
+///  - Custom error handling (AppError) is defined
+///    but not fully integrated throughout the code yet.
+///  - Future improvements will focus on robust error handling,
+///    graceful recovery, and better logging.
+/// 
+/// Please treat this as a work-in-progress
+/////////////////////////////////////////////////////////////////
+
 use log::error;
-use slint::PlatformError;
+
 
 #[derive(Debug)]
 enum AppError {
@@ -18,9 +28,5 @@ impl AppError {
                 message.clone()
             },
         };
-
-        
-
-        
     }
 }

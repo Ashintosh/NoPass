@@ -1,38 +1,70 @@
 import { Button } from "std-widgets.slint";
 
 import { DialogWindow } from "dialog.slint";
+import { SetupView } from "setup.slint";
+import { SettingsView } from "settings.slint";
+
+export enum Page {
+    Setup,
+    Settings,
+}
 
 export component MainWindow inherits Window {
-    width: 300px;
-    height: 150px;
+    preferred-width: 850px;
+    preferred-height: 400px;
+    min-width: 850px;
+    min-height: 500px;
 
-    in property <bool> dialog_visible: false;
-    callback toggle_dialog();
-
+    property <Page> active_page: Page.Setup;
     in property <string> win_title;
 
     title: win_title;
 
-    VerticalLayout {
-        alignment: space-between;
-        padding: 16px;
+    MenuBar {
+        Menu {
+            title: @tr("Vault");
 
-        Text {
-            text: dialog_visible ? "State: ON" : "State: OFF";
-            font-size: 24px;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
-
-        HorizontalLayout {
-            alignment: center;
-
-            Button {
-                width: 100px;
-                height: 40px;
-                text: dialog_visible ? "Turn OFF" : "Turn ON";
-                clicked => { toggle_dialog(); }
+            MenuItem {
+                title: @tr("New Vault");
+            }
+            MenuItem {
+                title: @tr("Open Vault");
             }
         }
+        Menu {
+            title: @tr("Items");
+
+            MenuItem {
+                title: @tr("New Item");
+            }
+            MenuItem {
+                title: @tr("Edit Item");
+            }
+            MenuItem {
+                title: @tr("Delete Item");
+            }
+        }
+    }
+
+    VerticalLayout {
+        spacing: 10px;
+        y: -20px;
+
+        if active_page == Page.Setup : SetupView {}
+        if active_page == Page.Settings : SettingsView {}
+
+        // HorizontalLayout {
+        //     spacing: 10px;
+
+        //     Button {
+        //         text: "Go to Setup";
+        //         clicked => { active_page = Page.Setup }
+        //     }
+
+        //     Button {
+        //         text: "Go to Settings";
+        //         clicked => { active_page = Page.Settings }
+        //     }
+        // }
     }
 }

@@ -1,5 +1,17 @@
+/////////////////////////////////////////////////////////////////
+///  NOTE:
+///  - Custom error handling (UiError and UiResult) is defined
+///    but not fully integrated throughout the code yet.
+///  - Future improvements will focus on robust error handling,
+///    graceful recovery, and better logging.
+/// 
+/// Please treat this as a work-in-progress
+/////////////////////////////////////////////////////////////////
+
 use std::fmt;
+
 use slint::PlatformError;
+
 
 #[derive(Debug)]
 pub(crate) enum UiError {

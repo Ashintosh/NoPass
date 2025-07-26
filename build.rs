@@ -1,20 +1,16 @@
-use slint_build;
 use std::fs;
-use std::path::{ Path, PathBuf };
+use std::path::{Path, PathBuf};
+
+use slint_build;
 
 fn main() {
     let ui_root = PathBuf::from("ui/");
-
-    // Compile the main slint entry file
     compile_main_ui(&ui_root);
-
-    // Set up cargo to recompile when any .slint file changes
     setup_cargo_recompile_triggers(&ui_root);
 }
 
 /// Compile the entry slint UI file 
 fn compile_main_ui(ui_root: &PathBuf) {
-    // Use native styling configuration
     let config = slint_build::CompilerConfiguration::new()
         .with_style("native".into());
 

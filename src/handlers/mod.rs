@@ -1,8 +1,10 @@
 pub(super) mod dialog_window;
 pub(super) mod main_window;
 
-use slint::{ComponentHandle, PlatformError, Weak};
 use std::sync::{Arc, Mutex};
+
+use slint::{ComponentHandle, Weak};
+
 
 pub(super) trait WindowHandler {
     type Component: ComponentHandle;
