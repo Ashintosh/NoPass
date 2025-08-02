@@ -1,6 +1,9 @@
 import { Button } from "std-widgets.slint";
 
 export component SetupView {
+    callback open_create_database();
+    callback open_unlock_vault();
+
     VerticalLayout {
         spacing: 30px;
         padding: 20px;
@@ -25,11 +28,13 @@ export component SetupView {
             Button {
                 height: 30px;
                 text: "Create Vault";
+                clicked => { open_create_database(); }
             }
 
             Button {
                 height: 30px;
                 text: "Open Vault";
+                clicked => { open_unlock_vault(); }
             }
         }
     }

@@ -3,6 +3,8 @@
 
 mod errors;
 mod handlers;
+mod models;
+mod utils;
 
 use handlers::WindowHandler;
 use handlers::main_window::MainWindowHandler;
@@ -15,7 +17,7 @@ fn main() {
 
     // Start the main window
     let mut main_window_handler = MainWindowHandler::new();
-    main_window_handler.get_window().unwrap().set_win_title("NoPass".into());
+    main_window_handler.get_window().upgrade().unwrap().set_win_title("NoPass".into());
     main_window_handler.run();
 }
 

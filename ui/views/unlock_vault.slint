@@ -1,0 +1,59 @@
+import { GroupBox, ComboBox, LineEdit, Button } from "std-widgets.slint";
+
+export component UnlockVaultView {
+    property <string> vault_password;
+    in-out property <string> vault_location;
+
+    callback unlock_clicked(string, string);
+    callback cancel_clicked();
+
+    VerticalLayout {
+        padding-top: 80px;
+        spacing: 10px;
+        alignment: start;
+
+        Text {
+            horizontal-alignment: center;
+            text: "Opening " + vault_location;
+        }
+
+        HorizontalLayout {
+            spacing: 15px;
+            padding-right: 50px;
+            padding-left: 50px;
+            height: 30px;
+            Text {
+                vertical-alignment: center;
+                text: "Vault Password";
+            }
+            LineEdit {
+                input-type: password;
+                text <=> vault_password;
+            }
+        }
+    } 
+    VerticalLayout {
+        alignment: end;
+        padding-right: 20px;
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+            Button {
+                text: "Cancel";
+                clicked => { 
+                    cancel_clicked();
+                    vault_location = "";
+                    vault_password = "";
+                }
+            }
+            Button {
+                text: "Unlock";
+                enabled: vault_password != "" && vault_password.character-count >= 4;
+                clicked => {
+                    unlock_clicked(vault_location, vault_password);
+                    vault_password = "";
+                }
+            }
+        }
+    }
+}

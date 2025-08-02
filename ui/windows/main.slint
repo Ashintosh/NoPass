@@ -1,12 +1,14 @@
-import { Button } from "std-widgets.slint";
+import { Button, ListView } from "std-widgets.slint";
 
 import { DialogWindow } from "dialog.slint";
-import { SetupView } from "setup.slint";
-import { SettingsView } from "settings.slint";
+import { SetupView } from "../views/setup.slint";
+import { UnlockVaultView } from "../views/unlock_vault.slint";
+import { VaultView } from "../views/vault.slint";
 
 export enum Page {
     Setup,
-    Settings,
+    UnlockVault,
+    Vault,
 }
 
 export component MainWindow inherits Window {
@@ -15,9 +17,18 @@ export component MainWindow inherits Window {
     min-width: 850px;
     min-height: 500px;
 
-    property <Page> active_page: Page.Setup;
+    callback open_create_database();
+    callback open_unlock_vault();
+    callback unlock_vault(string, string);
+    
+    in property <bool> disable_input: false;
     in property <string> win_title;
+    in property <bool> vault_open: false;
 
+    property <Page> active_page: Page.Setup;
+
+    in-out property <string> vault_location: "";
+    
     title: win_title;
 
     MenuBar {
@@ -50,21 +61,40 @@ export component MainWindow inherits Window {
         spacing: 10px;
         y: -20px;
 
-        if active_page == Page.Setup : SetupView {}
-        if active_page == Page.Settings : SettingsView {}
+        // Setup page
+        if active_page == Page.Setup : SetupView {
+            open_create_database => { open_create_database() }
+            open_unlock_vault => { 
+                open_unlock_vault();
+                if vault_location != "" {
+                    active_page = Page.UnlockVault;
+                }
+            }
+        }
 
-        // HorizontalLayout {
-        //     spacing: 10px;
+        // Unlock vault page
+        if active_page == Page.UnlockVault : UnlockVaultView {
+            vault_location: vault_location;
+            unlock_clicked(location, password) => {
+                unlock_vault(location, password);
+                if vault_open {
+                    active_page = Page.Vault;
+                }
+            }
+            cancel_clicked => { vault_location = ""; active_page = Page.Setup; }
+        }
 
-        //     Button {
-        //         text: "Go to Setup";
-        //         clicked => { active_page = Page.Setup }
-        //     }
+        // Vault page
+        if active_page == Page.Vault : VaultView {
+            
+        }
+    }
 
-        //     Button {
-        //         text: "Go to Settings";
-        //         clicked => { active_page = Page.Settings }
-        //     }
-        // }
+    // We can use the TouchArea to cover the entires window to disable input when visible
+    TouchArea {
+        visible: disable_input;
+        width: parent.width;
+        height: parent.height;
+        clicked => { /* swallow input */ }
     }
 }

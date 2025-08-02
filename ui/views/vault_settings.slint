@@ -1,0 +1,70 @@
+import { GroupBox, ComboBox, LineEdit, Button } from "std-widgets.slint";
+export component VaultSettingsView {
+    property <string> vault_password;
+    property <string> confirm_vault_password;
+
+    callback on_done_clicked(string);
+    callback on_cancel_clicked();
+
+    VerticalLayout {
+        padding-top: 80px;
+        spacing: 10px;
+        alignment: start;
+        HorizontalLayout {
+            spacing: 15px;
+            padding-right: 50px;
+            padding-left: 50px;
+            height: 30px;
+            Text {
+                vertical-alignment: center;
+                text: "Vault Password";
+            }
+            LineEdit {
+                input-type: password;
+                text <=> vault_password;
+            }
+        }
+        HorizontalLayout {
+            spacing: 15px;
+            padding-right: 50px;
+            padding-left: 50px;
+            height: 30px;
+            Text {
+                vertical-alignment: center;
+                text: "Confirm Password";
+            }
+            LineEdit {
+                input-type: password;
+                text <=> confirm_vault_password;
+            }
+        }
+    } 
+    VerticalLayout {
+        alignment: end;
+        padding-right: 20px;
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+            Button {
+                text: "Cancel";
+                clicked => { 
+                    on_cancel_clicked();
+                    vault_password = "";
+                    confirm_vault_password = "";
+                }
+            }
+            Button {
+                text: "Done";
+                enabled: vault_password == confirm_vault_password
+                    && vault_password != ""
+                    && confirm_vault_password != ""
+                    && vault_password.character-count >= 4;
+                clicked => {
+                    on_done_clicked(vault_password);
+                    vault_password = "";
+                    confirm_vault_password = "";
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,34 @@
+import { Button } from "std-widgets.slint";
+
+import { DialogWindow } from "dialog.slint";
+import { VaultSettingsView } from "../views/vault_settings.slint";
+//import { SettingsView } from "../views/set_key.slint";
+
+export enum CreatePage {
+    VaultSettings,
+}
+
+export component CreateVaultWindow inherits Window {
+    preferred-width: 850px;
+    preferred-height: 400px;
+    min-width: 850px;
+    min-height: 500px;
+
+    callback create_database_done(string);
+    callback create_database_cancel;
+
+    property <CreatePage> active_page: CreatePage.VaultSettings;
+    in property <string> win_title;
+
+    title: win_title;
+
+    VerticalLayout {
+        spacing: 10px;
+        y: -20px;
+
+        if active_page == CreatePage.VaultSettings : VaultSettingsView {
+            on_done_clicked(password) => { create_database_done(password); }
+            on_cancel_clicked => { create_database_cancel(); }
+        }
+    }
+}

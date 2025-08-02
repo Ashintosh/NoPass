@@ -6,7 +6,13 @@ license = "GPL-3.0"
 build = "build.rs"
 
 [dependencies]
+aes-gcm = "0.10.3"
+argon2 = { version = "0.5.3", features = ["std"] }
+bincode = { version = "2.0.1", features = ["serde"] }
 log = "0.4.27"
+once_cell = "1.21.3"
+rfd = "0.15.4"
+serde = { version = "1.0.219", features = ["derive"] }
 slint = "1.12.0"
 
 [build-dependencies]

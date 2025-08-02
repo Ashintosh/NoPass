@@ -1,5 +1,6 @@
 pub(super) mod dialog_window;
 pub(super) mod main_window;
+pub(super) mod create_vault_window;
 
 use std::sync::{Arc, Mutex};
 
@@ -42,6 +43,7 @@ pub(super) trait WindowHandler {
         }
         
         if let Some(window) = self.get_window().upgrade() {
+            self.initialize();
             self.set_visible(true);
             window.show().expect("Failed to show window");
         }
