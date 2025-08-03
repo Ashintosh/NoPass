@@ -3,17 +3,19 @@ use aes_gcm::{
 };
 use argon2::{password_hash::Salt, Argon2, Params, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::{self, SaltString, rand_core::OsRng as ArgonOsRng};
+use serde::{Serialize, Deserialize};
 
 
-pub(super) struct ArgonKey {
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub(crate) struct ArgonKey {
     pub(super) bytes: [u8; 32],
     pub(super) salt: [u8; 16],
 }
 
-pub(super) struct Crypto {}
+pub(crate) struct Crypto {}
 
 impl Crypto {
-    pub(super) fn derive_argon_key(bytes: &[u8], salt: Option<[u8; 16]>) -> Result<ArgonKey, String> {
+    pub(crate) fn derive_argon_key(bytes: &[u8], salt: Option<[u8; 16]>) -> Result<ArgonKey, String> {
         let memory = 15000;   // 15 MB
         let transform = 50;   // 50 rounds
         let parallel = 2;     // 2 threads
@@ -64,5 +66,77 @@ impl Crypto {
 
         let decrypted_bytes = cipher.decrypt(nonce, cipherbytes)?;
         Ok(decrypted_bytes)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_BYTES: &[u8] = b"Super secret message";
+    const TEST_PASSWORD: &[u8] = b"correct-horse-battery-staple";
+
+    #[test]
+    fn test_derive_argon_key_is_deterministic_with_same_salt() {
+        let salt = [42u8; 16];
+        let key1 = Crypto::derive_argon_key(TEST_PASSWORD, Some(salt)).expect("Key derivation failed");
+        let key2 = Crypto::derive_argon_key(TEST_PASSWORD, Some(salt)).expect("Key derivation failed");
+
+        assert_eq!(key1.bytes, key2.bytes);
+        assert_eq!(key1.salt, salt);
+    }
+
+    #[test]
+    fn test_derive_argon_key_generates_unique_salts() {
+        let key1 = Crypto::derive_argon_key(TEST_PASSWORD, None).expect("Key derivation failed");
+        let key2 = Crypto::derive_argon_key(TEST_PASSWORD, None).expect("Key derivation failed");
+
+        assert_ne!(key1.salt, key2.salt);
+        assert_ne!(key1.bytes, key2.bytes);
+    }
+
+    #[test]
+    fn test_encrypt_and_decrypt_returns_original_data() {
+        let key = Crypto::derive_argon_key(TEST_PASSWORD, None).expect("Key derivation failed");
+        let encrypted = Crypto::aes_gcm_encrypt(TEST_BYTES, key.bytes.to_vec()).expect("Encryption failed");
+
+        let decrypted = Crypto::aes_gcm_decrypt(&encrypted, key.bytes.to_vec()).expect("Decryption failed");
+
+        assert_eq!(decrypted, TEST_BYTES.to_vec());
+    }
+
+    #[test]
+    fn test_encrypt_produces_different_cipherbytes_each_time() {
+        let key = Crypto::derive_argon_key(TEST_PASSWORD, None).expect("Key derivation failed");
+
+        let cipherbytes1 = Crypto::aes_gcm_encrypt(TEST_BYTES, key.bytes.to_vec()).expect("Encryption failed");
+        let cipherbytes2 = Crypto::aes_gcm_encrypt(TEST_BYTES, key.bytes.to_vec()).expect("Encryption failed");
+
+        assert_ne!(cipherbytes1, cipherbytes2, "Cipherbytes should differ due to random nonces");
+    }
+
+    #[test]
+    fn test_decrypt_fails_with_wrong_key() {
+        let correct_key = Crypto::derive_argon_key(TEST_PASSWORD, None).expect("Key derivation failed");
+        let wrong_key = Crypto::derive_argon_key(b"incorrect", None).expect("Key derivation failed");
+
+        let cipherbytes = Crypto::aes_gcm_encrypt(TEST_BYTES, correct_key.bytes.to_vec()).expect("Encryption failed");
+        let result = Crypto::aes_gcm_decrypt(&cipherbytes, wrong_key.bytes.to_vec());
+
+        assert!(result.is_err(), "Decryption should fail with wrong key");
+    }
+
+    #[test]
+    fn test_decrypt_fails_with_tampered_cipherbytes() {
+        let key = Crypto::derive_argon_key(TEST_PASSWORD, None).expect("Key derivation failed");
+        let mut cipherbytes = Crypto::aes_gcm_encrypt(TEST_BYTES, key.bytes.to_vec()).expect("Encryption failed");
+
+        // Flip a byte in the cipherbytes
+        let last_index = cipherbytes.len() - 1;
+        cipherbytes[last_index] ^= 0xFF;
+
+        let result = Crypto::aes_gcm_decrypt(&cipherbytes, key.bytes.to_vec());
+        assert!(result.is_err(), "Tampered cipherbytes should fail to decrypt");
     }
 }

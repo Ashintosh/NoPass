@@ -9,12 +9,14 @@ dependencies = [
  "aes-gcm",
  "argon2",
  "bincode",
+ "copypasta",
  "log",
  "once_cell",
  "rfd",
  "serde",
  "slint",
  "slint-build",
+ "tempfile",
 ]
 
 [[package]]

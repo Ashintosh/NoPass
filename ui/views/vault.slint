@@ -1,24 +1,266 @@
-import { ListView } from "std-widgets.slint";
+import { ListView, VerticalBox, Button, LineEdit, TextEdit, HorizontalBox } from "std-widgets.slint";
+
+struct MainWindowItem {
+    id: int,
+    name: string,
+}
+
+struct VaultItem {
+    id: int,
+    name: string,
+    username: string,
+    password: string,
+    url: string,
+    notes: string,
+}
 
 export component VaultView {
-    ListView {
-        for data in [
-            { text: "Blue", color: #0000ff, bg: #eeeeee},
-            { text: "Red", color: #ff0000, bg: #eeeeee},
-            { text: "Green", color: #00ff00, bg: #eeeeee},
-            { text: "Yellow", color: #ffff00, bg: #222222 },
-            { text: "Black", color: #000000, bg: #eeeeee },
-            { text: "White", color: #ffffff, bg: #222222 },
-            { text: "Magenta", color: #ff00ff, bg: #eeeeee },
-            { text: "Cyan", color: #00ffff, bg: #222222 },
-        ] : Rectangle {
-            height: 30px;
-            background: data.bg;
-            width: parent.width;
-            Text {
-                x: 0;
-                text: data.text;
-                color: data.color;
+    in property <[MainWindowItem]> items;
+    in-out property <VaultItem> selected_item;
+    property <int> selected_id: -1;
+    property <bool> edit_mode: false;
+
+    property <string> username_input: "";
+    property <string> password_input: "";
+    property <string> url_input: "";
+    property <string> notes_input: "";
+    property <string> name_input: "";
+
+    callback load_item(int);
+    callback save_item(VaultItem);
+    callback add_item();
+    callback delete_item(int);
+
+    callback copy_to_clipboard(string);
+
+    function sync_inputs() {
+        username_input = selected_item.username;
+        password_input = selected_item.password;
+        url_input = selected_item.url;
+        notes_input = selected_item.notes;
+        name_input = selected_item.name;
+        selected_id = selected_item.id;
+    }
+
+    function clear_inputs() {
+        selected_item.username = "";
+        selected_item.password = "";
+        selected_item.url = "";
+        selected_item.notes = "";
+        selected_item.name = "";
+        selected_item.id = -1;
+    }
+
+    changed selected_item => { sync_inputs(); }
+
+    HorizontalLayout {
+        VerticalLayout {
+            padding-top: 20px;
+            padding-left: 5px;
+
+            HorizontalLayout {
+                width: 230px;
+
+                Button {
+                    text: "Delete";
+                    clicked => { 
+                        delete_item(selected_id);
+                        selected_id = -1;
+                        clear_inputs();
+                        sync_inputs();
+                    }
+                }
+                Button {
+                    text: "Add";
+                    clicked => { add_item(); edit_mode = true; }
+                }
+            }
+
+            Rectangle {
+                width: 230px;
+                background: #ffffff00;
+                border-width: 2px;
+                border-color: #ffffff13;
+
+                ListView {
+                    for data in items : Rectangle {
+                        height: 30px;
+                        width: 100%;
+                        background: ta.has-hover ? #ffffff13 : #ffffff00;
+                        
+                        Text {
+                            x: 10px;
+                            text: data.name;
+                            color: root.selected_id == data.id ? #00b48a : #e2e2e2;
+                        }
+
+                        ta := TouchArea {
+                            clicked => {
+                                if edit_mode {
+                                    edit_mode = false;
+                                }
+
+                                root.selected_id = data.id;
+                                load_item(data.id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            border-width: 2px;
+            border-color: #ffffff13;
+
+            VerticalLayout {
+                GridLayout {
+                    padding-top: 25px;
+                    padding: 10px;
+                    spacing: 10px;
+
+                    Row {
+                        Text {
+                            text: "Username";
+                            vertical-alignment: center;
+                        }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            LineEdit {
+                                height: 30px;
+                                width: 100%;
+                                enabled: edit_mode;
+                                text <=> username_input;
+                            }
+                            TouchArea {
+                                visible: ! edit_mode;
+                                mouse-cursor: pointer;
+                                clicked => { copy_to_clipboard(username_input); }
+                            }
+                        }
+                        
+                        Text {
+                            text: "Password";
+                            vertical-alignment: center;
+                        }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            LineEdit {
+                                input-type: edit_mode ? text: password;
+                                height: 30px;
+                                width: 100%;
+                                enabled: edit_mode;
+                                text <=> password_input;
+                            }
+                            TouchArea {
+                                visible: ! edit_mode;
+                                mouse-cursor: pointer;
+                                clicked => { copy_to_clipboard(password_input); }
+                            }
+                        }
+                    }
+
+                    Row {
+                        Text {
+                            text: "Url";
+                        }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            colspan: 3;
+                            LineEdit {
+                                height: 30px;
+                                width: 100%;
+                                enabled: edit_mode;
+                                text <=> url_input;
+                            }
+                            TouchArea {
+                                visible: ! edit_mode;
+                                mouse-cursor: pointer;
+                                clicked => { copy_to_clipboard(url_input); }
+                            }
+                        }
+                    }
+
+                    Row {
+                        Text {
+                            text: "Notes";
+                        }
+                        TextEdit {
+                            text <=> notes_input;
+                            enabled: edit_mode;
+                            colspan: 3;
+                            rowspan: 10;
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    padding: 10px;
+                    spacing: 10px;
+                    Text {
+                        text: "Name";
+                        vertical-alignment: center;
+                        
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        LineEdit {
+                            height: 30px;
+                            width: 100%;
+                            enabled: edit_mode;
+                            text <=> name_input;
+                        }
+                        
+                        TouchArea {
+                            visible: ! edit_mode;
+                            mouse-cursor: pointer;
+                            clicked => { copy_to_clipboard(name_input); }
+                        }
+                    }
+                }
+
+                if ! edit_mode && selected_id != -1 : VerticalLayout {
+                    alignment: end;
+
+                    HorizontalLayout {
+                        alignment: end;
+
+                        Button {
+                            text: "Edit";
+                            clicked => { edit_mode = true; }
+                        }
+                    }
+                }
+
+                if edit_mode && selected_id != -1 : VerticalLayout {
+                    alignment: end;
+
+                    HorizontalLayout {
+                        alignment: end;
+
+                        Button {
+                            text: "Cancel";
+                            clicked => {
+                                edit_mode = false;
+                                load_item(selected_id);
+                                sync_inputs();
+                            }
+                        }
+                        Button {
+                            text: "Save";
+                            clicked => {
+                                selected_item.username = username_input;
+                                selected_item.password = password_input;
+                                selected_item.url = url_input;
+                                selected_item.notes = notes_input;
+                                selected_item.name = name_input;
+                                save_item(selected_item);
+
+                                edit_mode = false;
+                            }
+                        }
+                    }
+                }
             }
         }
     }

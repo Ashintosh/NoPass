@@ -8,6 +8,7 @@ use slint::{ComponentHandle, SharedString, Weak};
 use crate::CreateVaultWindow;
 use crate::handlers::{WindowHandler, dialog_window::DialogWindowHandler};
 use crate::models::vault::{Item, Vault};
+use crate::utils::crypto::Crypto;
 use crate::utils::file;
 
 
@@ -61,11 +62,14 @@ impl CreateVaultWindowHandler {
         });
     }
 
+    /// Create a new encrypted vault file at the specified path.
+    /// Shows a confirmation or error dialog depending on success.
     fn create_vault_file(path: &PathBuf, password: String) {
         let vault = Vault::new();
         let encoded_vault = encode_to_vec(&vault, standard()).unwrap();
+        let key = Crypto::derive_argon_key(password.as_bytes(), None).unwrap();
 
-        match file::write_encrypted_file(&encoded_vault, path, password) {
+        match file::write_encrypted_file(&encoded_vault, path, &key) {
             Ok(()) => {
                 rfd::MessageDialog::new()
                     .set_title("Vault Created")
@@ -87,6 +91,7 @@ impl CreateVaultWindowHandler {
         }
     }
 
+    /// Opens a save file dialog and returns the user-selected path (if any).
     fn save_file_dialog() -> Option<PathBuf> {
         rfd::FileDialog::new()
             .set_title("Select Vault Location")

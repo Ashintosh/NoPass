@@ -11,6 +11,20 @@ export enum Page {
     Vault,
 }
 
+struct MainWindowItem {
+    id: int,
+    name: string,
+}
+
+struct VaultItem {
+    id: int,
+    name: string,
+    username: string,
+    password: string,
+    url: string,
+    notes: string,
+}
+
 export component MainWindow inherits Window {
     preferred-width: 850px;
     preferred-height: 400px;
@@ -20,42 +34,24 @@ export component MainWindow inherits Window {
     callback open_create_database();
     callback open_unlock_vault();
     callback unlock_vault(string, string);
+    callback load_selected_item(int);
+    callback save_selected_item(VaultItem);
+    callback add_vault_item();
+    callback delete_vault_item(int);
+
+    callback copy_to_clipboard(string);
     
     in property <bool> disable_input: false;
     in property <string> win_title;
     in property <bool> vault_open: false;
 
-    property <Page> active_page: Page.Setup;
+    property <Page> active_page: Page.Setup; // Page.Setup
 
     in-out property <string> vault_location: "";
+    in-out property <[MainWindowItem]> vault_items;
+    in-out property <VaultItem> selected_vault_item;
     
     title: win_title;
-
-    MenuBar {
-        Menu {
-            title: @tr("Vault");
-
-            MenuItem {
-                title: @tr("New Vault");
-            }
-            MenuItem {
-                title: @tr("Open Vault");
-            }
-        }
-        Menu {
-            title: @tr("Items");
-
-            MenuItem {
-                title: @tr("New Item");
-            }
-            MenuItem {
-                title: @tr("Edit Item");
-            }
-            MenuItem {
-                title: @tr("Delete Item");
-            }
-        }
-    }
 
     VerticalLayout {
         spacing: 10px;
@@ -86,7 +82,13 @@ export component MainWindow inherits Window {
 
         // Vault page
         if active_page == Page.Vault : VaultView {
-            
+            items <=> root.vault_items;
+            selected_item <=> root.selected_vault_item;
+            load_item(item_id) => { load_selected_item(item_id); }
+            save_item(item) => { save_selected_item(item); }
+            add_item => { add_vault_item(); }
+            delete_item(item_id) => { delete_vault_item(item_id); }
+            copy_to_clipboard(text) => { copy_to_clipboard(text); }
         }
     }
 
