@@ -10,7 +10,6 @@ dependencies = [
  "argon2",
  "bincode",
  "copypasta",
- "i-slint-backend-winit",
  "log",
  "once_cell",
  "rfd",
