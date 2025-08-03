@@ -35,7 +35,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y mold
-          echo "RUSTFLAGS='-C link-arg=-fuse-ld=mold'" >> $GITHUB_ENV
+          echo RUSTFLAGS=-C link-arg=-fuse-ld=mold >> $GITHUB_ENV
 
       - name: Run tests
         run: cargo test --verbose
