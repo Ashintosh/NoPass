@@ -7,15 +7,15 @@ use crate::errors::ui_errors::UiError;
 use crate::handlers::WindowHandler;
 
 
-pub(crate) struct DialogWindowHandler {
+pub(crate) struct _DialogWindowHandler {
     _window_strong: DialogWindow,
     window: Weak<DialogWindow>,
     visible: Arc<Mutex<bool>>,
 }
 
-impl DialogWindowHandler {
-    pub(crate) fn new() -> Result<Self, UiError> {
-        let window = DialogWindow::new().map_err(|_| UiError::WindowCreation("Failed to create dialog window".into()))?;
+impl _DialogWindowHandler {
+    pub(crate) fn _new() -> Result<Self, UiError> {
+        let window = DialogWindow::new().map_err(|_| UiError::_WindowCreation("Failed to create dialog window".into()))?;
         let weak = window.as_weak();
         let handler = Self {
             _window_strong: window,
@@ -28,12 +28,12 @@ impl DialogWindowHandler {
     }
 
     // TODO: Setup for dialog box
-    fn setup(&self) {
+    fn _setup(&self) {
         todo!()
     }
 }
 
-impl WindowHandler for DialogWindowHandler {
+impl WindowHandler for _DialogWindowHandler {
     type Component = DialogWindow;
 
     fn get_window(&self) -> Weak<Self::Component> {

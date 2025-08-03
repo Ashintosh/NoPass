@@ -1,5 +1,3 @@
-use std::fs::{read, File};
-use std::os::unix::thread;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc};
@@ -13,9 +11,8 @@ use slint::{ComponentHandle, SharedString, Weak};
 use slint::{VecModel, ModelRc};
 
 use crate::handlers::create_vault_window::CreateVaultWindowHandler;
-use crate::handlers::{WindowHandler, dialog_window::DialogWindowHandler};
-use crate::models::vault::{self, Item, Vault};
-use crate::utils::crypto::ArgonKey;
+use crate::handlers::WindowHandler;
+use crate::models::vault::{Item, Vault};
 use crate::utils::file::{self, read_encrypted_file};
 use crate::{utils, MainWindow, MainWindowItem, VaultItem};
 
@@ -291,7 +288,7 @@ impl MainWindowHandler {
 
     /// Opens the CreateVaultWindow if it's not already visible and
     /// disables input on the main window while open.
-    fn open_create_vault_window(window_weak: &Weak<MainWindow>, create_vault_window_handler: &Arc<Mutex<CreateVaultWindowHandler>>) {
+    fn open_create_vault_window(_window_weak: &Weak<MainWindow>, create_vault_window_handler: &Arc<Mutex<CreateVaultWindowHandler>>) {
         // TODO: Disable window input when another window is open
 
         if let Ok(mut handler) = create_vault_window_handler.lock() {

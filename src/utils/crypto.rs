@@ -1,8 +1,8 @@
 use aes_gcm::{
     aead::{rand_core::RngCore, Aead, AeadCore, KeyInit, OsRng as AesOsRng}, Aes256Gcm, Key as AesKey, Error as AesError, Nonce
 };
-use argon2::{password_hash::Salt, Argon2, Params, PasswordHasher, PasswordVerifier};
-use argon2::password_hash::{self, SaltString, rand_core::OsRng as ArgonOsRng};
+use argon2::{Argon2, Params};
+use argon2::password_hash::{rand_core::OsRng as ArgonOsRng};
 use serde::{Serialize, Deserialize};
 
 

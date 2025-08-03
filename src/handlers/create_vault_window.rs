@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use bincode::config::standard;
-use bincode::serde::{encode_to_vec, decode_from_slice};
+use bincode::serde::encode_to_vec;
 use slint::{ComponentHandle, SharedString, Weak};
 
 use crate::CreateVaultWindow;
-use crate::handlers::{WindowHandler, dialog_window::DialogWindowHandler};
-use crate::models::vault::{Item, Vault};
+use crate::handlers::WindowHandler;
+use crate::models::vault::Vault;
 use crate::utils::crypto::Crypto;
 use crate::utils::file;
 

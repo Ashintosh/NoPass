@@ -12,7 +12,7 @@ use log::error;
 
 
 #[derive(Debug)]
-enum AppError {
+enum _AppError {
     Other {
         message: String,
         file: &'static str,
@@ -20,9 +20,9 @@ enum AppError {
     },
 }
 
-impl AppError {
-    fn generate(&self) {
-        let user_msg = match self {
+impl _AppError {
+    fn _generate(&self) {
+        let _user_msg = match self {
             Self::Other { message, file, line } => {
                 error!("Error at {}:{} - {}", file, line, message);
                 message.clone()
