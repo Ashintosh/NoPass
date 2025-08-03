@@ -48,6 +48,7 @@ jobs:
   build-release:
     if: github.event_name == 'release'
     name: Build release binary on ${{ matrix.os }}
+    needs: test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -109,11 +110,17 @@ jobs:
           name: NoPass-macos-latest
           path: ./artifacts/macos
 
+      - name: Rename executables
+        run: |
+          mv ./artifacts/linux/NoPass ./artifacts/linux/NoPass-linux
+          mv ./artifacts/windows/NoPass.exe ./artifacts/windows/NoPass-windows.exe
+          mv ./artifacts/macos/NoPass ./artifacts/macos/NoPass-macos
+
       - name: Publish release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.event.release.tag_name }} ./artifacts/windows/NoPass.exe --clobber --name NoPass-windows.exe
-          gh release upload ${{ github.event.release.tag_name }} ./artifacts/linux/NoPass --clobber --name NoPass-linux
-          gh release upload ${{ github.event.release.tag_name }} ./artifacts/macos/NoPass --clobber --name NoPass-macos
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/windows/NoPass-windows.exe --clobber 
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/linux/NoPass-linux --clobber
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/macos/NoPass-macos --clobber
 
