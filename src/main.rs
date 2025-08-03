@@ -15,9 +15,6 @@ fn main() {
     #[cfg(debug_assertions)]
     print_debug_message();
 
-    #[cfg(windows)]
-    std::env::set_var("SLINT_BACKEND", "winit-software");
-
     // Start the main window
     let mut main_window_handler = MainWindowHandler::new();
     main_window_handler.get_window().upgrade().unwrap().set_win_title("NoPass".into());
