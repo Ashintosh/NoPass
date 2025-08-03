@@ -15,9 +15,6 @@ fn main() {
     #[cfg(debug_assertions)]
     print_debug_message();
 
-    #[cfg(windows)]
-    slint::platform::set_platform(Box::new(i_slint_backend_winit::Backend::new().unwrap()));
-
     // Start the main window
     let mut main_window_handler = MainWindowHandler::new();
     main_window_handler.get_window().upgrade().unwrap().set_win_title("NoPass".into());
