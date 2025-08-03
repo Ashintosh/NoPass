@@ -1,10 +1,12 @@
-name: Test & Build
+name: Test, Build & Release
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  release:
+    types: [ published ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -15,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
       - uses: actions/checkout@v4
@@ -39,15 +41,14 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose
-
-  build:
+  build-release:
     name: Build release binary on ${{ matrix.os }}
     needs: test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    
     steps:
       - uses: actions/checkout@v4
 
@@ -68,12 +69,47 @@ jobs:
           sudo apt install -y mold
           echo RUSTFLAGS=-C link-arg=-fuse-ld=mold >> $GITHUB_ENV
 
-      - name: Build
+      - name: Build release
         run: cargo build --release --verbose
-
+      
       - name: Upload binary artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: NoPass-${{ runner.os }}
-          path: target/release/NoPass
+          name: NoPass-${{ matrix.os }}
+          path: target/release/NoPass${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+  publish-release:
+    name: Publish release assets
+    needs: build-release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NoPass-windows-latest
+          path: ./artifacts/windows
+
+      - name: Download Window artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NoPass-ubuntu-latest
+          path: ./artifacts/linux
+      
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NoPass-macos-latest
+          path: ./artifacts/macos
+
+      - name: Publish release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/windows/NoPass.exe --clobber
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/linux/NoPass --clobber
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/macos/NoPass --clobber
+
