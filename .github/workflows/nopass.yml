@@ -1,22 +1,30 @@
+name: Test, Build & Release
+
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
   release:
-    types: [published]
+    types: [ published ]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   test:
-    if: github.event_name != 'release'
     name: Run tests on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Cache Cargo registry
         uses: actions/cache@v4
         with:
@@ -26,40 +34,86 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
       - name: Install mold linker (Linux only)
         if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install -y mold
           echo RUSTFLAGS=-C link-arg=-fuse-ld=mold >> $GITHUB_ENV
+
       - name: Run tests
         run: cargo test --verbose
 
-  release:
+  build-release:
     if: github.event_name == 'release'
-    name: Build and publish release artifacts
+    name: Build release binary on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Rust
-        uses: actions/setup-rust@v1
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
         with:
-          rust-version: stable
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Install mold linker (Linux only)
         if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install -y mold
           echo RUSTFLAGS=-C link-arg=-fuse-ld=mold >> $GITHUB_ENV
-      - name: Build release binary
+
+      - name: Build release
         run: cargo build --release --verbose
-      - name: Upload to GitHub release
-        uses: softprops/action-gh-release@v1
+      
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: target/release/NoPass
+          name: NoPass-${{ matrix.os }}
+          path: ${{ runner.os == 'Windows' && 'target/release/NoPass.exe' || 'target/release/NoPass' }}
+
+  publish-release:
+    if: github.event_name == 'release'
+    name: Publish release assets
+    needs: build-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NoPass-ubuntu-latest
+          path: ./artifacts/linux
+
+      - name: Download Window artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NoPass-windows-latest
+          path: ./artifacts/windows
+      
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NoPass-macos-latest
+          path: ./artifacts/macos
+
+      - name: Publish release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/windows/NoPass.exe --clobber
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/linux/NoPass --clobber
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/macos/NoPass --clobber
+
