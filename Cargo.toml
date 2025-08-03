@@ -16,9 +16,6 @@ rfd = "0.15.4"
 serde = { version = "1.0.219", features = ["derive"] }
 slint = "1.12.0"
 
-[target.'cfg(windows)'.dependencies]
-slint = { version = "1.12.0", features = ["backend-winit"] }
-
 [build-dependencies]
 slint-build = "1.12.0"
 
