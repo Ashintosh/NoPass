@@ -113,7 +113,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.event.release.tag_name }} ./artifacts/windows/NoPass.exe --clobber
-          gh release upload ${{ github.event.release.tag_name }} ./artifacts/linux/NoPass --clobber
-          gh release upload ${{ github.event.release.tag_name }} ./artifacts/macos/NoPass --clobber
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/windows/NoPass.exe --clobber --name NoPass-windows.exe
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/linux/NoPass --clobber --name NoPass-linux
+          gh release upload ${{ github.event.release.tag_name }} ./artifacts/macos/NoPass --clobber --name NoPass-macos
 
