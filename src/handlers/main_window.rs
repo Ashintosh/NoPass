@@ -149,7 +149,11 @@ impl MainWindowHandler {
         let mut vault_guard = GLOBAL_VAULT.lock().unwrap();
 
         if let Some(vault) = &mut *vault_guard {
-            let encoded_vault = encode_to_vec(&vault, standard()).unwrap();
+            // Remove key from Vault struct before saving to file
+            let mut vault_without_key = vault.clone();
+            vault_without_key.key = None;
+
+            let encoded_vault = encode_to_vec(&vault_without_key, standard()).unwrap();
             let vault_location = PathBuf::from(window.get_vault_location().to_string());
             let key = vault.key.as_ref().unwrap();
 
