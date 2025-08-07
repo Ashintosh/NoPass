@@ -71,22 +71,28 @@ impl CreateVaultWindowHandler {
 
         match file::write_encrypted_file(&encoded_vault, path, &key) {
             Ok(()) => {
-                rfd::MessageDialog::new()
-                    .set_title("Vault Created")
-                    .set_description(format!("Vault has been saved at {}", path.display()))
-                    .set_buttons(rfd::MessageButtons::Ok)
-                    .show();
+                let path = path.display().to_string();
+                std::thread::spawn(move || {
+                    rfd::MessageDialog::new()
+                        .set_title("Vault Created")
+                        .set_description(format!("Vault has been saved at {}", path))
+                        .set_buttons(rfd::MessageButtons::Ok)
+                        .show();
+                });
             },
             Err(err) => {
                 let message = 
-                    if cfg!(debug_assertions) { err.as_str() } 
-                    else { "Failed to create vault file." };
+                    if cfg!(debug_assertions) { err.as_str().to_string() } 
+                    else { "Failed to create vault file.".to_string() };
 
-                rfd::MessageDialog::new()
-                    .set_title("Error")
-                    .set_description(message)
-                    .set_buttons(rfd::MessageButtons::Ok)
-                    .show();
+                std::thread::spawn(move || {
+                    rfd::MessageDialog::new()
+                        .set_title("Error")
+                        .set_description(message)
+                        .set_buttons(rfd::MessageButtons::Ok)
+                        .show();
+                });
+                
             }
         }
     }

@@ -159,14 +159,16 @@ impl MainWindowHandler {
 
             if let Err(e) = file::write_encrypted_file(&encoded_vault, &vault_location, key) {
                 let message = 
-                    if cfg!(debug_assertions) { e.as_str() } 
-                    else { "Failed to save vault." };
+                    if cfg!(debug_assertions) { e.as_str().to_string() } 
+                    else { "Failed to save vault.".to_string() };
 
-                rfd::MessageDialog::new()
-                    .set_title("Error")
-                    .set_description(message)
-                    .set_buttons(rfd::MessageButtons::Ok)
-                    .show();
+                std::thread::spawn(move || {
+                    rfd::MessageDialog::new()
+                        .set_title("Error")
+                        .set_description(message)
+                        .set_buttons(rfd::MessageButtons::Ok)
+                        .show();
+                });
             }
         }
     }
@@ -258,20 +260,24 @@ impl MainWindowHandler {
                     window.set_vault_open(true);
                 },
                 Err(e) => {
-                    rfd::MessageDialog::new()
-                        .set_title("Decode Error")
-                        .set_description(&format!("Failed to decode vault data: {}", e))
-                        .set_buttons(rfd::MessageButtons::Ok)
-                        .show();
+                    std::thread::spawn(move || {
+                        rfd::MessageDialog::new()
+                            .set_title("Decode Error")
+                            .set_description(&format!("Failed to decode vault data: {}", e))
+                            .set_buttons(rfd::MessageButtons::Ok)
+                            .show();
+                    });
                     return;
                 }
             }
         } else {
-            rfd::MessageDialog::new()
-                .set_title("Error")
-                .set_description("Failed to open vault file. Check password.")
-                .set_buttons(rfd::MessageButtons::Ok)
-                .show();
+            std::thread::spawn(move || {
+                rfd::MessageDialog::new()
+                    .set_title("Error")
+                    .set_description("Failed to open vault file. Check password.")
+                    .set_buttons(rfd::MessageButtons::Ok)
+                    .show();
+            });
         }
 
         Self::update_vault_items(&window);
