@@ -53,6 +53,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: rust
+          build-mode: auto
 
       - name: Show Rust version
         run: |
@@ -63,8 +64,8 @@ jobs:
         if: runner.os == 'Windows'
         run: echo RUSTFLAGS=-C link-args=/STACK:8388608 >> $GITHUB_ENV
 
-      - name: Check target
-        run: cargo check --release --verbose
+      - name: Build target
+        run: cargo build --release --verbose
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
