@@ -64,7 +64,7 @@ jobs:
         run: echo RUSTFLAGS=-C link-args=/STACK:8388608 >> $GITHUB_ENV
 
       - name: Build target
-        run: cargo build --release --verbose
+        run: cargo build --release --all-targets --verbose
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
