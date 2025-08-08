@@ -23,7 +23,7 @@ pub(crate) struct CreateVaultWindowHandler {
 impl CreateVaultWindowHandler {
     /// Creates a new `MainWindowHandler` and sets up window behavior.
     /// Panics on window creation failure (app can't continue without it).
-    pub(crate) fn new() -> Arc<Mutex<Self>> {
+    pub(crate) async fn new() -> Arc<Mutex<Self>> {
         let window = CreateVaultWindow::new().expect("Failed to create new MainWindow");
         let weak = window.as_weak();
         let handler = Self {
@@ -33,12 +33,12 @@ impl CreateVaultWindowHandler {
         };
 
         let handler = Arc::new(Mutex::new(handler));
-        Self::setup(&handler);
+        Self::setup(&handler).await;
         
         handler
     }
 
-    fn setup(handler_arc: &Arc<Mutex<Self>>) {
+    async fn setup(handler_arc: &Arc<Mutex<Self>>) {
         let handler_arc_clone = Arc::clone(handler_arc);
         let window = handler_arc_clone.lock().unwrap().get_window().upgrade().unwrap();
         //let window_weak = window.as_weak();
@@ -46,11 +46,15 @@ impl CreateVaultWindowHandler {
         let handler_arc_clone_done = Arc::clone(handler_arc);
         window.on_create_database_done(move |password: SharedString| {
             if let Some(vault_path) = Self::save_file_dialog() {
-                Self::create_vault_file(&vault_path, password.into());
+                let handler_arc_for_task = Arc::clone(&handler_arc_clone_done);
 
-                if let Ok(mut handler) = handler_arc_clone_done.lock() {
-                    handler.hide();
-                }
+                slint::spawn_local(async move {
+                    Self::create_vault_file(&vault_path, password.into()).await;
+                    
+                    if let Ok(mut handler) = handler_arc_for_task.lock() {
+                        handler.hide();
+                    }
+                }).ok();
             }
         }); 
 
@@ -64,43 +68,37 @@ impl CreateVaultWindowHandler {
 
     /// Create a new encrypted vault file at the specified path.
     /// Shows a confirmation or error dialog depending on success.
-    fn create_vault_file(path: &PathBuf, password: String) {
+    async fn create_vault_file(path: &PathBuf, password: String) {
+        fn show_dialog(title: String, message: String) {
+            slint::spawn_local(async move {
+                rfd::MessageDialog::new()
+                    .set_title(title)
+                    .set_description(message)
+                    .set_buttons(rfd::MessageButtons::Ok)
+                    .show();
+            }).ok();
+        }
+
         let vault = Vault::new();
         let encoded_vault = encode_to_vec(&vault, standard()).unwrap();
         let key = Crypto::derive_argon_key(password.as_bytes(), None).unwrap();
+        let path_clone = path.clone();
 
-        let path_arc = Arc::new(path);
-        let handle = std::thread::spawn(move || {
-            let path = PathBuf::from(&path_arc.as_path());
-            file::write_encrypted_file(&encoded_vault, &path_arc.to_path_buf(), &key)
-        });
+        let result = tokio::task::spawn_blocking(move || {
+            file::write_encrypted_file(&encoded_vault, &path_clone, &key)
+        }).await.unwrap();
 
-        match file::write_encrypted_file(&encoded_vault, path, &key) {
-            Ok(()) => {
-                let path = path.display().to_string();
-                std::thread::spawn(move || {
-                    rfd::MessageDialog::new()
-                        .set_title("Vault Created")
-                        .set_description(format!("Vault has been saved at {}", path))
-                        .set_buttons(rfd::MessageButtons::Ok)
-                        .show();
-                });
-            },
-            Err(err) => {
-                let message = 
-                    if cfg!(debug_assertions) { err.as_str().to_string() } 
-                    else { "Failed to create vault file.".to_string() };
-
-                std::thread::spawn(move || {
-                    rfd::MessageDialog::new()
-                        .set_title("Error")
-                        .set_description(message)
-                        .set_buttons(rfd::MessageButtons::Ok)
-                        .show();
-                });
-                
-            }
-        }
+        match result {
+            Ok(()) => show_dialog(
+                "Vault Created".into(),
+                format!("Vault has been saved at {}", path.display())
+            ),
+            Err(e) => show_dialog(
+                "Error".into(),
+                if cfg!(debug_assertions) { e.into() }
+                else { "Failed to create vault file.".into() }
+            )
+        };
     }
 
     /// Opens a save file dialog and returns the user-selected path (if any).

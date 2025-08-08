@@ -31,7 +31,7 @@ pub(crate) struct MainWindowHandler {
 impl MainWindowHandler {
     /// Creates a new `MainWindowHandler` and sets up window behavior.
     /// Panics on window creation failure (app can't continue without it).
-    pub(crate) fn new() -> Self {
+    pub(crate) async fn new() -> Self {
         let window = MainWindow::new().expect("Failed to create new MainWindow");
         let weak = window.as_weak();
         let handler = Self {
@@ -40,16 +40,16 @@ impl MainWindowHandler {
             visible: Arc::new(Mutex::new(false)),
         };
 
-        Self::setup(&handler);
+        Self::setup(&handler).await;
         handler
     }
 
-    fn setup(handler: &Self) {
+    async fn setup(handler: &Self) {
         let window = handler.get_window().upgrade().unwrap();  
         let window_weak = window.as_weak();
         
         // This must be declared outside of the event handler to prevent creating a new window handler each time
-        let create_vault_window_handler = CreateVaultWindowHandler::new();
+        let create_vault_window_handler = CreateVaultWindowHandler::new().await;
 
         // Open create vault
         let window_weak_create = window_weak.clone();

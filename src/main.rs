@@ -11,12 +11,13 @@ use handlers::main_window::MainWindowHandler;
 
 slint::include_modules!();
 
-fn main() {
+#[tokio::main]
+async fn main() {
     #[cfg(debug_assertions)]
     print_debug_message();
 
     // Start the main window
-    let mut main_window_handler = MainWindowHandler::new();
+    let mut main_window_handler = MainWindowHandler::new().await;
     main_window_handler.get_window().upgrade().unwrap().set_win_title("NoPass".into());
     main_window_handler.run();
 }
