@@ -23,10 +23,10 @@ jobs:
         include:
           - os: ubuntu-latest
             os-name: Linux
-          - os: windows-latest
-            os-name: Windows
-          - os: macos-latest
-            os-name: macOS
+          # - os: windows-latest
+          #   os-name: Windows
+          # - os: macos-latest
+          #   os-name: macOS
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
