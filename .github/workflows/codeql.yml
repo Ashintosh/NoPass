@@ -53,11 +53,6 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: rust
-          paths: src
-          paths-ignore: |
-            target
-            tests/data
-            vendor
 
       - name: Show Rust version
         run: |
