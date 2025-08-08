@@ -48,7 +48,7 @@ jobs:
 
   build-release:
     if: github.event_name == 'release'
-    name: Build release binary on ${{ matrix.os }}
+    name: Test & build release binary on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

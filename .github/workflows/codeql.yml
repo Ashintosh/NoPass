@@ -42,7 +42,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install mold linker (Linux only)
+      - name: Install & configure mold linker (Linux only)
         if: runner.os == 'Linux'
         run: |
           sudo apt update
