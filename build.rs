@@ -22,7 +22,7 @@ fn compile_main_ui(ui_root: &PathBuf) {
 
 /// Sets up cargo to recompile when any .slint file in the given directory changes
 fn setup_cargo_recompile_triggers(ui_root: &PathBuf) {
-    for path in find_slint_files(ui_root) {
+    for path in find_slint_files_iterative(ui_root) {
         if let Some(path_str) = path.to_str() {
             println!("cargo:rerun-if-changed={}", path_str);
         }
@@ -30,7 +30,7 @@ fn setup_cargo_recompile_triggers(ui_root: &PathBuf) {
 }
 
 /// Recursively find all files with '.slint' extension in the given directory
-fn find_slint_files(directory: &PathBuf) -> Vec<PathBuf> {
+fn _find_slint_files(directory: &PathBuf) -> Vec<PathBuf> {
     let mut slint_files = Vec::new();
 
     // Read directory entries, return empty vec if directory can't be read
@@ -45,9 +45,33 @@ fn find_slint_files(directory: &PathBuf) -> Vec<PathBuf> {
 
         if path.is_dir() {
             // Recursively search subdirectories
-            slint_files.extend(find_slint_files(&path));
+            slint_files.extend(_find_slint_files(&path));
         } else if is_slint_file(&path) {
             slint_files.push(path);
+        }
+    }
+
+    slint_files
+}
+
+/// Iteratively find all files with '.slint' extension in the given directory
+fn find_slint_files_iterative(directory: &PathBuf) -> Vec<PathBuf> {
+    let mut slint_files = Vec::new();
+    let mut dirs_to_visit = vec![directory.clone()];
+
+    while let Some(dir) = dirs_to_visit.pop() {
+        let entries = match fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                dirs_to_visit.push(path);
+            } else if is_slint_file(&path) {
+                slint_files.push(path);
+            }
         }
     }
 
