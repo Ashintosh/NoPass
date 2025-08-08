@@ -53,20 +53,18 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: rust
-          build-mode: manual
 
       - name: Show Rust version
         run: |
           rustc --version
           cargo --version
 
-      - name: Build project with increased stack size (Windows)
+      - name: Build preparation (Windows only)
         if: runner.os == 'Windows'
-        run: RUSTFLAGS="-C link-args=/STACK:8388608" cargo build --release --verbose
+        run: echo RUSTFLAGS=-C link-args=/STACK:8388608 >> $GITHUB_ENV
 
-      - name: Build project (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: cargo build --release --verbose
+      - name: Check target
+        run: cargo check --release --verbose
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
