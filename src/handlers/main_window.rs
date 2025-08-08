@@ -285,15 +285,14 @@ impl MainWindowHandler {
 
     /// Opens a system file picker to select a vault file
     fn open_existing_vault() -> Option<PathBuf> {
-        if let Some(path) = rfd::FileDialog::new()
-            .set_title("Select Vault File")
-            .add_filter("Vault Files", &["vault"])
-            .pick_file()
-        {
-            return Some(path);
-        }
+        let handle = std::thread::spawn(move || {
+            rfd::FileDialog::new()
+                .set_title("Select Vault File")
+                .add_filter("Vault Files", &["vault"])
+                .pick_file()
+        });
 
-        None
+        handle.join().ok()?
     }
 
     /// Opens the CreateVaultWindow if it's not already visible and

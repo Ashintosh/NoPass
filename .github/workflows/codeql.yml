@@ -1,0 +1,32 @@
+name: "CodeQL Rust"
+
+on:
+  push:
+    branches: [ "main", "v*.*.*" ]
+  pull_request:
+    branches: [ "main", "v*.*.*" ]
+  release:
+    types: [ published ]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly
+
+jobs:
+  analyze:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: rust
+
+      - name: Build (Linux/Mac/Windows)
+        run: cargo build --all-targets
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

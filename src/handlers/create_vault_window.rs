@@ -69,6 +69,12 @@ impl CreateVaultWindowHandler {
         let encoded_vault = encode_to_vec(&vault, standard()).unwrap();
         let key = Crypto::derive_argon_key(password.as_bytes(), None).unwrap();
 
+        let path_arc = Arc::new(path);
+        let handle = std::thread::spawn(move || {
+            let path = PathBuf::from(&path_arc.as_path());
+            file::write_encrypted_file(&encoded_vault, &path_arc.to_path_buf(), &key)
+        });
+
         match file::write_encrypted_file(&encoded_vault, path, &key) {
             Ok(()) => {
                 let path = path.display().to_string();
@@ -99,10 +105,15 @@ impl CreateVaultWindowHandler {
 
     /// Opens a save file dialog and returns the user-selected path (if any).
     fn save_file_dialog() -> Option<PathBuf> {
-        rfd::FileDialog::new()
-            .set_title("Select Vault Location")
-            .set_file_name("passwords.vault")
-            .save_file()
+        let handle = std::thread::spawn(move || {
+            rfd::FileDialog::new()
+                .set_title("Select Vault Location")
+                .add_filter("Vault Files", &["vault"])
+                .set_file_name("passwords.vault")
+                .save_file()
+        });
+
+        handle.join().ok()?
     }
 }
 
