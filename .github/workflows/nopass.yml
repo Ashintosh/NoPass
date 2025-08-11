@@ -126,4 +126,4 @@ jobs:
           gh release upload ${{ github.event.release.tag_name }} ./artifacts/windows/NoPass-${{ github.event.release.tag_name }}-windows.exe --clobber 
           gh release upload ${{ github.event.release.tag_name }} ./artifacts/linux/NoPass-${{ github.event.release.tag_name }}-linux --clobber
           gh release upload ${{ github.event.release.tag_name }} ./artifacts/macos/NoPass-${{ github.event.release.tag_name }}-macos --clobber
-
+          
