@@ -1,3 +1,5 @@
 extractor-rust:
   exclude:
     - target/**
+  include:
+    - target/**/build/**/out/NoPass-*/app.rs

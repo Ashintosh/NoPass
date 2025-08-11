@@ -2,9 +2,9 @@ name: Test, Build & Release
 
 on:
   push:
-    branches: [ "main", "v*.*.*" ]
+    branches: [ "main", "v[a-zA-Z0-9].[a-zA-Z0-9].[a-zA-Z0-9]" ]
   pull_request:
-    branches: [ "main", "v*.*.*" ]
+    branches: [ "main", "v[a-zA-Z0-9].[a-zA-Z0-9].[a-zA-Z0-9]" ]
   release:
     types: [ published ]
 

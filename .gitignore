@@ -17,6 +17,4 @@ target/
 #.idea/
 
 .cargo/*
-!.cargo/config.toml
-
 .vscode/
