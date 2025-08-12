@@ -2,7 +2,8 @@ pub(super) mod dialog_window;
 pub(super) mod main_window;
 pub(super) mod create_vault_window;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use slint::{ComponentHandle, Weak};
 
@@ -12,17 +13,15 @@ pub(super) trait WindowHandler {
 
     fn get_window(&self) -> Weak<Self::Component>;
     fn get_visible(&self) -> bool;
-    fn get_visible_arc(&self) -> Arc<Mutex<bool>>;
-    fn set_visible(&mut self, value: bool);
+    fn get_visible_arc(&self) -> Arc<AtomicBool>;
+    fn set_visible(&self, value: bool);
     
-
     fn initialize(&mut self) {
         if let Some(window) = self.get_window().upgrade() {
             let visible = self.get_visible_arc();
-
-            window.window().on_close_requested(move || {
-                if let Ok(mut visible) = visible.lock() {
-                    *visible = false;    
+            window.window().on_close_requested( move || {
+                if visible.load(Ordering::Relaxed) {
+                    visible.store(false, Ordering::Relaxed);
                 }
                 slint::CloseRequestResponse::HideWindow
             });
@@ -54,6 +53,10 @@ pub(super) trait WindowHandler {
             self.set_visible(false);
             window.hide().expect("Failed to hide window");
         }
+    }
+
+    fn cleanup() {
+        unimplemented!()
     }
 }
 

@@ -1,19 +1,21 @@
 use serde::{Serialize, Deserialize};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::utils::crypto::ArgonKey;
+use crate::utils::{crypto::ArgonKey, zerobyte::ZeroByte};
 
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+
+#[derive(Clone, Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub(crate) struct Item {
     pub id: i32,
-    pub name: String,
-    pub username: String,
-    pub password: String,
-    pub url: String,
-    pub notes: String,
+    pub name: ZeroByte,
+    pub username: ZeroByte,
+    pub password: ZeroByte,
+    pub url: ZeroByte,
+    pub notes: ZeroByte,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub(crate) struct Vault {
     pub nonce: i32,
     pub items: Vec<Item>,
@@ -28,10 +30,10 @@ impl Vault {
                 Item {
                     id: 0,
                     name: "New Item".into(),
-                    username: String::new(),
-                    password: String::new(),
-                    url: String::new(),
-                    notes: String::new(),
+                    username: ZeroByte::with_capacity(0),
+                    password: ZeroByte::with_capacity(0),
+                    url: ZeroByte::with_capacity(0),
+                    notes: ZeroByte::with_capacity(0),
                 },
             ],
             key: None,

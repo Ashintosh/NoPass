@@ -1,20 +1,23 @@
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::{Arc};
-
-use once_cell::sync::Lazy;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use bincode::config::standard;
-use bincode::serde::{encode_to_vec, decode_from_slice};
-use slint::{ComponentHandle, SharedString, Weak};
-use slint::{VecModel, ModelRc};
+use bincode::serde::{decode_from_slice, encode_to_vec};
+use once_cell::sync::Lazy;
+use rfd::MessageButtons;
+use slint::{ComponentHandle, SharedString, Weak, VecModel, ModelRc};
+use zeroize::Zeroize;
 
 use crate::handlers::create_vault_window::CreateVaultWindowHandler;
 use crate::handlers::WindowHandler;
 use crate::models::vault::{Item, Vault};
+
+use crate::utils;
 use crate::utils::file::{self, read_encrypted_file};
-use crate::{utils, MainWindow, MainWindowItem, VaultItem};
+use crate::utils::zerobyte::ZeroByte;
+use crate::{MainWindow, MainWindowItem, VaultItem};
 
 
 /// Global static vault data, shared between handlers.
@@ -25,7 +28,7 @@ static GLOBAL_VAULT: Lazy<Mutex<Option<Vault>>> = Lazy::new(|| Mutex::new(None))
 pub(crate) struct MainWindowHandler {
     _window_strong: MainWindow,  // Keeps the actual window alive with struct
     window: Weak<MainWindow>,
-    visible: Arc<Mutex<bool>>,
+    visible: Arc<AtomicBool>,
 }
 
 impl MainWindowHandler {
@@ -37,7 +40,7 @@ impl MainWindowHandler {
         let handler = Self {
             _window_strong: window,
             window: weak,
-            visible: Arc::new(Mutex::new(false)),
+            visible: Arc::new(AtomicBool::new(false)),
         };
 
         Self::setup(&handler).await;
@@ -66,7 +69,8 @@ impl MainWindowHandler {
         // Unlock vault
         let window_weak_unlock = window_weak.clone();
         window.on_unlock_vault(move |location: SharedString, password: SharedString| {
-            Self::unlock_vault(&window_weak_unlock, location.to_string(), password.to_string());
+            let password = ZeroByte::from_shared_string(password);
+            Self::unlock_vault(&window_weak_unlock, location.to_string(), &password);
         });
 
         // Load item
@@ -127,10 +131,10 @@ impl MainWindowHandler {
                     Item { 
                         id: new_id,
                         name: "New Item".into(),
-                        username: String::new(),
-                        password: String::new(),
-                        url: String::new(),
-                        notes: String::new(),
+                        username: ZeroByte::with_capacity(0),
+                        password: ZeroByte::with_capacity(0),
+                        url: ZeroByte::with_capacity(0),
+                        notes: ZeroByte::with_capacity(0),
                     }
                 ); 
 
@@ -153,22 +157,16 @@ impl MainWindowHandler {
             let mut vault_without_key = vault.clone();
             vault_without_key.key = None;
 
-            let encoded_vault = encode_to_vec(&vault_without_key, standard()).unwrap();
+            let encoded_vault = ZeroByte::from_vec(encode_to_vec(&vault_without_key, standard()).unwrap());
             let vault_location = PathBuf::from(window.get_vault_location().to_string());
             let key = vault.key.as_ref().unwrap();
 
             if let Err(e) = file::write_encrypted_file(&encoded_vault, &vault_location, key) {
                 let message = 
-                    if cfg!(debug_assertions) { e.as_str().to_string() } 
-                    else { "Failed to save vault.".to_string() };
+                    if cfg!(debug_assertions) { e.as_str() } 
+                    else { "Failed to save vault." };
 
-                std::thread::spawn(move || {
-                    rfd::MessageDialog::new()
-                        .set_title("Error")
-                        .set_description(message)
-                        .set_buttons(rfd::MessageButtons::Ok)
-                        .show();
-                });
+                file::show_dialog("Error".into(), message.into(), MessageButtons::Ok.into());
             }
         }
     }
@@ -179,11 +177,11 @@ impl MainWindowHandler {
             let mut vault_guard = GLOBAL_VAULT.lock().unwrap();
             if let Some(vault) = &mut *vault_guard {
                 if let Some(item) = vault.items.iter_mut().find(|item| item.id == new_item.id) {
-                    item.name = new_item.name.to_string();
-                    item.username = new_item.username.to_string();
-                    item.password = new_item.password.to_string();
-                    item.url = new_item.url.to_string();
-                    item.notes = new_item.notes.to_string();
+                    item.name = ZeroByte::from_shared_string(new_item.name);
+                    item.username = ZeroByte::from_shared_string(new_item.username);
+                    item.password = ZeroByte::from_shared_string(new_item.password);
+                    item.url = ZeroByte::from_shared_string(new_item.url);
+                    item.notes = ZeroByte::from_shared_string(new_item.notes);
                 }
             }
         }
@@ -201,13 +199,14 @@ impl MainWindowHandler {
         
         if let Some(vault) = &*vault_guard {
             if let Some(item) = vault.items.iter().find(|item| item.id == item_id) {
+
                 let selected_item = VaultItem {
                     id: item.id,
-                    name: item.name.clone().into(),
-                    username: item.username.clone().into(),
-                    password: item.password.clone().into(),
-                    url: item.url.clone().into(),
-                    notes: item.notes.clone().into(),
+                    name: item.name.to_shared_string_secure(),
+                    username: item.username.to_shared_string_secure(),
+                    password: item.password.to_shared_string_secure(),
+                    url: item.url.to_shared_string_secure(),
+                    notes: item.notes.to_shared_string_secure(),
                 };
 
                 window.set_selected_vault_item(selected_item);
@@ -224,7 +223,7 @@ impl MainWindowHandler {
                 .iter()
                 .map(|item| MainWindowItem {
                     id: item.id,
-                    name: item.name.clone().into(),
+                    name: item.name.to_shared_string_secure(),
                 })
                 .collect();
 
@@ -243,13 +242,13 @@ impl MainWindowHandler {
     }
 
     /// Attempts to open and decrypt an existing vault file
-    fn unlock_vault(window: &Weak<MainWindow>, location: String, password: String) {
+    fn unlock_vault(window: &Weak<MainWindow>, location: String, password: &ZeroByte) {
         let window = window.upgrade().unwrap();
         let path = PathBuf::from_str(location.as_str()).unwrap();
-        let key = file::derive_file_key(&path, &password).unwrap();
+        let key = file::derive_file_key(&path, password).unwrap();
 
         if let Ok(bytes) = read_encrypted_file(&path, &key) {
-            match decode_from_slice(&bytes, standard()) {
+            match bytes.with_bytes(|byte_slice| decode_from_slice(byte_slice, standard())) {   //decode_from_slice(bytes.as_bytes(), standard()) {
                 Ok((decoded_bytes, _bytes_read)) => {
                     let mut vault_guard = GLOBAL_VAULT.lock().unwrap();
 
@@ -260,24 +259,16 @@ impl MainWindowHandler {
                     window.set_vault_open(true);
                 },
                 Err(e) => {
-                    std::thread::spawn(move || {
-                        rfd::MessageDialog::new()
-                            .set_title("Decode Error")
-                            .set_description(&format!("Failed to decode vault data: {}", e))
-                            .set_buttons(rfd::MessageButtons::Ok)
-                            .show();
-                    });
+                    file::show_dialog(
+                        "Decode Error".into(),
+                        format!("Failed to decode vault data: {}", e).as_str().into(),
+                        MessageButtons::Ok.into(),
+                    );
                     return;
                 }
             }
         } else {
-            std::thread::spawn(move || {
-                rfd::MessageDialog::new()
-                    .set_title("Error")
-                    .set_description("Failed to open vault file. Check password.")
-                    .set_buttons(rfd::MessageButtons::Ok)
-                    .show();
-            });
+            file::show_dialog("Error".into(), "Failed to open vault file".into(), MessageButtons::Ok.into());
         }
 
         Self::update_vault_items(&window);
@@ -285,14 +276,7 @@ impl MainWindowHandler {
 
     /// Opens a system file picker to select a vault file
     fn open_existing_vault() -> Option<PathBuf> {
-        let handle = std::thread::spawn(move || {
-            rfd::FileDialog::new()
-                .set_title("Select Vault File")
-                .add_filter("Vault Files", &["vault"])
-                .pick_file()
-        });
-
-        handle.join().ok()?
+        file::show_file_dialog("Select Vault File".into(), Some(("Vault Files", &["vault"])), None, true)
     }
 
     /// Opens the CreateVaultWindow if it's not already visible and
@@ -317,29 +301,36 @@ impl WindowHandler for MainWindowHandler {
     }
 
     fn get_visible(&self) -> bool {
-        if let Ok(visible) = self.visible.lock() {
-            return *visible;
-        }
-
-        false
+        self.visible.load(Ordering::Relaxed)
     }
 
-    fn get_visible_arc(&self) -> Arc<Mutex<bool>> {
+    fn get_visible_arc(&self) -> Arc<AtomicBool> {
         self.visible.clone()
     }
 
-    fn set_visible(&mut self, value: bool) {
-        if let Ok(mut visible) = self.visible.lock() {
-            *visible = value;
-        }
+    fn set_visible(&self, value: bool) {
+        self.visible.store(value, Ordering::Relaxed);
     }
 
     fn initialize(&mut self) {
         if let Some(window) = self.get_window().upgrade() {
-            window.window().on_close_requested(move || {
+            window.window().on_close_requested( || {
+                Self::cleanup();
+            
                 // Exit the entire program if main window is closed
                 std::process::exit(0);
             });
         }
+    }
+
+    fn cleanup() {
+        // Zeroize vault and clean up properly before exit
+        if let Ok(mut vault_guard) = GLOBAL_VAULT.lock() {
+            vault_guard.take().map(|mut vault| vault.zeroize());
+            return;
+        }
+
+        #[cfg(debug_assertions)]
+        println!("Warning: No vault found to zeroize");
     }
 }

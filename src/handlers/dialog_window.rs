@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use slint::{ComponentHandle, Weak};
 
@@ -10,7 +11,7 @@ use crate::handlers::WindowHandler;
 pub(crate) struct _DialogWindowHandler {
     _window_strong: DialogWindow,
     window: Weak<DialogWindow>,
-    visible: Arc<Mutex<bool>>,
+    visible: Arc<AtomicBool>,
 }
 
 impl _DialogWindowHandler {
@@ -20,14 +21,13 @@ impl _DialogWindowHandler {
         let handler = Self {
             _window_strong: window,
             window: weak,
-            visible: Arc::new(Mutex::new(false)),
+            visible: Arc::new(AtomicBool::new(false)),
         };
 
         //Self::setup(&handler);
         Ok(handler)
     }
 
-    // TODO: Setup for dialog box
     fn _setup(&self) {
         todo!()
     }
@@ -41,20 +41,14 @@ impl WindowHandler for _DialogWindowHandler {
     }
 
     fn get_visible(&self) -> bool {
-        if let Ok(visible) = self.visible.lock() {
-            return *visible;
-        }
-
-        false
+        self.visible.load(Ordering::Relaxed)
     }
 
-    fn get_visible_arc(&self) -> Arc<Mutex<bool>> {
+    fn get_visible_arc(&self) -> Arc<AtomicBool> {
         self.visible.clone()
     }
 
-    fn set_visible(&mut self, value: bool) {
-        if let Ok(mut visible) = self.visible.lock() {
-            *visible = value;
-        }
+    fn set_visible(&self, value: bool) {
+        self.visible.store(value, Ordering::Relaxed);
     }
 }

@@ -1,8 +1,10 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use bincode::config::standard;
 use bincode::serde::encode_to_vec;
+use rfd::MessageButtons;
 use slint::{ComponentHandle, SharedString, Weak};
 
 use crate::CreateVaultWindow;
@@ -10,6 +12,7 @@ use crate::handlers::WindowHandler;
 use crate::models::vault::Vault;
 use crate::utils::crypto::Crypto;
 use crate::utils::file;
+use crate::utils::zerobyte::ZeroByte;
 
 
 /// Coordinates the MainWindow lifecycle and UI behavior.
@@ -17,7 +20,7 @@ use crate::utils::file;
 pub(crate) struct CreateVaultWindowHandler {
     _window_strong: CreateVaultWindow,
     window: Weak<CreateVaultWindow>,
-    visible: Arc<Mutex<bool>>,
+    visible: Arc<AtomicBool>,
 }
 
 impl CreateVaultWindowHandler {
@@ -29,7 +32,7 @@ impl CreateVaultWindowHandler {
         let handler = Self {
             _window_strong: window,
             window: weak,
-            visible: Arc::new(Mutex::new(false)),
+            visible: Arc::new(AtomicBool::new(false)),
         };
 
         let handler = Arc::new(Mutex::new(handler));
@@ -45,11 +48,16 @@ impl CreateVaultWindowHandler {
 
         let handler_arc_clone_done = Arc::clone(handler_arc);
         window.on_create_database_done(move |password: SharedString| {
-            if let Some(vault_path) = Self::save_file_dialog() {
+            let password = ZeroByte::from_shared_string(password);
+            if let Some(vault_path) = file::show_file_dialog(
+                "Select Vault Location".into(), 
+                Some(("Vault Files", &["vault"])), 
+                "passwords.vault".into(),
+                false
+            ) {
                 let handler_arc_for_task = Arc::clone(&handler_arc_clone_done);
-
                 slint::spawn_local(async move {
-                    Self::create_vault_file(&vault_path, password.into()).await;
+                    Self::create_vault_file(&vault_path, &password).await;
                     
                     if let Ok(mut handler) = handler_arc_for_task.lock() {
                         handler.hide();
@@ -68,20 +76,10 @@ impl CreateVaultWindowHandler {
 
     /// Create a new encrypted vault file at the specified path.
     /// Shows a confirmation or error dialog depending on success.
-    async fn create_vault_file(path: &PathBuf, password: String) {
-        fn show_dialog(title: String, message: String) {
-            slint::spawn_local(async move {
-                rfd::MessageDialog::new()
-                    .set_title(title)
-                    .set_description(message)
-                    .set_buttons(rfd::MessageButtons::Ok)
-                    .show();
-            }).ok();
-        }
-
+    async fn create_vault_file(path: &PathBuf, password: &ZeroByte) {
         let vault = Vault::new();
-        let encoded_vault = encode_to_vec(&vault, standard()).unwrap();
-        let key = Crypto::derive_argon_key(password.as_bytes(), None).unwrap();
+        let encoded_vault = ZeroByte::from_vec(encode_to_vec(&vault, standard()).unwrap());
+        let key = Crypto::derive_argon_key(password, None).unwrap();
         let path_clone = path.clone();
 
         let result = tokio::task::spawn_blocking(move || {
@@ -89,29 +87,18 @@ impl CreateVaultWindowHandler {
         }).await.unwrap();
 
         match result {
-            Ok(()) => show_dialog(
+            Ok(()) => file::show_dialog(
                 "Vault Created".into(),
-                format!("Vault has been saved at {}", path.display())
+                format!("Vault has been saved at {}", path.display()).as_str().into(),
+                MessageButtons::Ok.into(),
             ),
-            Err(e) => show_dialog(
+            Err(e) => file::show_dialog(
                 "Error".into(),
-                if cfg!(debug_assertions) { e.into() }
-                else { "Failed to create vault file.".into() }
+                if cfg!(debug_assertions) { e.as_str().into() }
+                    else { "Failed to create vault file.".into() },
+                MessageButtons::Ok.into(),
             )
         };
-    }
-
-    /// Opens a save file dialog and returns the user-selected path (if any).
-    fn save_file_dialog() -> Option<PathBuf> {
-        let handle = std::thread::spawn(move || {
-            rfd::FileDialog::new()
-                .set_title("Select Vault Location")
-                .add_filter("Vault Files", &["vault"])
-                .set_file_name("passwords.vault")
-                .save_file()
-        });
-
-        handle.join().ok()?
     }
 }
 
@@ -123,20 +110,14 @@ impl WindowHandler for CreateVaultWindowHandler {
     }
 
     fn get_visible(&self) -> bool {
-        if let Ok(visible) = self.visible.lock() {
-            return *visible;
-        }
-
-        false
+        self.visible.load(Ordering::Relaxed)
     }
 
-    fn get_visible_arc(&self) -> Arc<Mutex<bool>> {
+    fn get_visible_arc(&self) -> Arc<AtomicBool> {
         self.visible.clone()
     }
 
-    fn set_visible(&mut self, value: bool) {
-        if let Ok(mut visible) = self.visible.lock() {
-            *visible = value;
-        }
+    fn set_visible(&self, value: bool) {
+        self.visible.store(value, Ordering::Relaxed);
     }
 }

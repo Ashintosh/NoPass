@@ -1,7 +1,9 @@
 pub(super) mod crypto;
 pub(super) mod file;
+pub(super) mod zerobyte;
 
 use copypasta::{ClipboardContext, ClipboardProvider};
+
 
 pub(super) fn copy_text_to_clipboard(text: String) {
     let mut ctx = ClipboardContext::new().unwrap();
