@@ -50,9 +50,9 @@ impl CreateVaultWindowHandler {
         window.on_create_database_done(move |password: SharedString| {
             let password = ZeroByte::from_shared_string(password);
             if let Some(vault_path) = file::show_file_dialog(
-                "Select Vault Location".into(), 
+                Some("Select Vault Location"), 
                 Some(("Vault Files", &["vault"])), 
-                "passwords.vault".into(),
+                Some("passwords.vault"),
                 false
             ) {
                 let handler_arc_for_task = Arc::clone(&handler_arc_clone_done);
@@ -78,25 +78,57 @@ impl CreateVaultWindowHandler {
     /// Shows a confirmation or error dialog depending on success.
     async fn create_vault_file(path: &PathBuf, password: &ZeroByte) {
         let vault = Vault::new();
-        let encoded_vault = ZeroByte::from_vec(encode_to_vec(&vault, standard()).unwrap());
-        let key = Crypto::derive_argon_key(password, None).unwrap();
-        let path_clone = path.clone();
 
-        let result = tokio::task::spawn_blocking(move || {
+        let encoded_vault = match encode_to_vec(&vault, standard()) {
+            Ok(data) => ZeroByte::from_vec(data),
+            Err(e) => {
+                file::show_dialog(
+                    Some("Error"),
+                    Some(format!("Failed to encode vault: {}", e).as_str()),
+                    Some(MessageButtons::Ok)
+                );
+                return;
+            }
+        };
+
+        let key = match Crypto::derive_argon_key(password, None) {
+            Ok(k) => k,
+            Err(e) => {
+                file::show_dialog(
+                    Some("Error"),
+                    Some(format!("Failed to derive key: {}", e).as_str()),
+                    Some(MessageButtons::Ok)
+                );
+                return;
+            }
+        };
+
+        let path_clone = path.clone();
+        let result = match tokio::task::spawn_blocking(move || {
             file::write_encrypted_file(&encoded_vault, &path_clone, &key)
-        }).await.unwrap();
+        }).await {
+            Ok(res) => res,
+            Err(e) => {
+                file::show_dialog(
+                    Some("Error"),
+                    Some(format!("Task failed: {}", e).as_str()),
+                    Some(MessageButtons::Ok)
+                );
+                return;
+            }
+        };
 
         match result {
             Ok(()) => file::show_dialog(
-                "Vault Created".into(),
-                format!("Vault has been saved at {}", path.display()).as_str().into(),
-                MessageButtons::Ok.into(),
+                Some("Vault Created"),
+                Some(format!("Vault has been saved at {}", path.display()).as_str()),
+                Some(MessageButtons::Ok),
             ),
             Err(e) => file::show_dialog(
-                "Error".into(),
-                if cfg!(debug_assertions) { e.as_str().into() }
-                    else { "Failed to create vault file.".into() },
-                MessageButtons::Ok.into(),
+                Some("Error"),
+                if cfg!(debug_assertions) { Some(e.as_str()) }
+                    else { Some("Failed to create vault file.") },
+                Some(MessageButtons::Ok),
             )
         };
     }

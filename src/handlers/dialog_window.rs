@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use slint::{ComponentHandle, Weak};
 
-use crate::DialogWindow;
+use crate::{ui_error, DialogWindow};
 use crate::errors::ui_errors::UiError;
 use crate::handlers::WindowHandler;
 
@@ -16,7 +16,9 @@ pub(crate) struct _DialogWindowHandler {
 
 impl _DialogWindowHandler {
     pub(crate) fn _new() -> Result<Self, UiError> {
-        let window = DialogWindow::new().map_err(|_| UiError::_WindowCreation("Failed to create dialog window".into()))?;
+        let window = DialogWindow::new()
+            .map_err(|e| ui_error!(PlatformError, e, "Failed to create DialogWindow"))?;
+        //let window = DialogWindow::new().map_err(|_| UiError::_WindowCreation("Failed to create dialog window".into()))?;
         let weak = window.as_weak();
         let handler = Self {
             _window_strong: window,

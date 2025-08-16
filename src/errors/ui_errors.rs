@@ -8,36 +8,32 @@
 /// Please treat this as a work-in-progress
 /////////////////////////////////////////////////////////////////
 
-use std::fmt;
+use log::error;
+use thiserror::Error;
 
-use slint::PlatformError;
 
-
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub(crate) enum UiError {
-    _WindowCreation(String),
-    _WindowOperation(String),
-    Platform(PlatformError),
-    _Internal(String),
+    #[error("UI platform error occurred: {message}\nsource: {source}")]
+    PlatformError {
+        source: slint::PlatformError,
+        message: String,
+    },
+
+    #[error("UI error: {0}")]
+    Generic(String),
 }
 
-impl std::error::Error for UiError { }
-
-impl fmt::Display for UiError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::_WindowCreation(msg) => write!(f, "Window creation error: {}", msg),
-            Self::_WindowOperation(msg) => write!(f, "Window operation error: {}", msg),
-            Self::Platform(e) => write!(f, "Platform error: {}", e),
-            Self::_Internal(msg) => write!(f, "Internal error: {}", msg),
+#[macro_export]
+macro_rules! ui_error {
+    (PlatformError, $source:expr, $msg:expr) => {
+        UiError::PlatformError {
+            source: $source,
+            message: $msg.into(),
         }
-    }
-}
+    };
 
-impl From<PlatformError> for UiError {
-    fn from(e: PlatformError) -> Self {
-        Self::Platform(e)
-    }
+    (Generic, $msg:expr) => {
+        UiError::Generic($msg.into())
+    };
 }
-
-type _UiResult<T> = Result<T, UiError>;

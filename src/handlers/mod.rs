@@ -7,6 +7,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use slint::{ComponentHandle, Weak};
 
+use crate::errors::ui_errors::UiError;
+use crate::ui_error;
+
 
 pub(super) trait WindowHandler {
     type Component: ComponentHandle;
@@ -28,31 +31,43 @@ pub(super) trait WindowHandler {
         }
     }
 
-    fn run(&mut self) {
+    fn run(&mut self) -> Result<(), UiError> {
         if let Some(window) = self.get_window().upgrade() {
             self.initialize();
             self.set_visible(true);
-            window.run().expect("Failed to run window");
+
+            window.run()
+                .map_err(|e| ui_error!(PlatformError, e, "Failed to run window"))?;
         }
+
+        Err(ui_error!(Generic, "Failed to upgrade weak window"))
     }
 
-    fn show(&mut self) {
+    fn show(&mut self) -> Result<(), UiError> {
         if self.get_visible() {
-            return;
+            return Ok(());
         }
         
         if let Some(window) = self.get_window().upgrade() {
             self.initialize();
             self.set_visible(true);
-            window.show().expect("Failed to show window");
+
+            window.show()
+                .map_err(|e| ui_error!(PlatformError, e, "Failed to show window"))?;
         }
+
+        Err(ui_error!(Generic, "Failed to upgrade weak window"))
     }
 
-    fn hide(&mut self) {
+    fn hide(&mut self) -> Result<(), UiError> {
         if let Some(window) = self.get_window().upgrade() {
             self.set_visible(false);
-            window.hide().expect("Failed to hide window");
+
+            window.hide()
+                .map_err(|e| ui_error!(PlatformError, e, "Failed to hide window"))?;
         }
+
+        Err(ui_error!(Generic, "Failed to upgrade weak window"))
     }
 
     fn cleanup() {

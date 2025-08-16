@@ -9,24 +9,46 @@
 /////////////////////////////////////////////////////////////////
 
 use log::error;
+use thiserror::Error;
 
 
-#[derive(Debug)]
-enum _AppError {
-    Other {
-        message: String,
-        file: &'static str,
-        line: u32,
+#[derive(Error, Debug)]
+pub(crate) enum AppError {
+    #[error("{msg}: {source}")]
+    IoError {
+        msg: String,
+        #[source]
+        source: std::io::Error,
     },
+
+    #[error("{msg}: {str_source}")]
+    PoisedState {
+        msg: String,
+        str_source: String,
+    },
+
+    #[error("App error: {0}")]
+    Generic(String),
 }
 
-impl _AppError {
-    fn _generate(&self) {
-        let _user_msg = match self {
-            Self::Other { message, file, line } => {
-                error!("Error at {}:{} - {}", file, line, message);
-                message.clone()
-            },
-        };
-    }
+#[macro_export]
+macro_rules! app_error {
+    (IoError, $err:expr, $msg:expr) => {
+        AppError::IoError {
+            msg: $msg.into(),
+            source: $err,
+        }
+    };
+
+    (PoisedState, $err:expr, $msg:expr) => {
+        AppError::PoisedState {
+            msg: $msg.into(),
+            str_source: $err,
+        }
+    };
+
+    (Generic, $msg:expr) => {
+        AppError::Generic($msg.into())
+    };
 }
+
